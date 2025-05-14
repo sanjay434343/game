@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Realistic 2-Player Shooting Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      background: url('https://images.unsplash.com/photo-1505935428862-770b6f24f629?fit=crop&w=1950&q=80') no-repeat center center fixed;
+      background-size: cover;
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    canvas {
+      display: block;
+    }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border-radius: 8px;
+      color: white;
+      z-index: 1000;
+    }
+    #ui input, #ui button {
+      padding: 8px;
+      margin: 4px;
+      border-radius: 5px;
+      border: none;
+      font-size: 16px;
+    }
+    #roomList {
+      margin-top: 10px;
+      max-height: 100px;
+      overflow-y: auto;
+      background: #111;
+      padding: 8px;
+      border-radius: 5px;
+    }
+    .roomItem {
+      cursor: pointer;
+      padding: 4px;
+      background: #222;
+      margin: 2px 0;
+      border-radius: 4px;
+    }
+    .roomItem:hover {
+      background: #333;
+    }
+    #info {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: lime;
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+<div id="ui">
+  <input id="pin" placeholder="Room PIN" maxlength="6">
+  <button onclick="createRoom()">Create Room</button>
+  <div id="roomList"></div>
+</div>
+<canvas id="game"></canvas>
+<div id="info"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getDatabase, ref, set, onValue, get, child, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyCxD9kkuUl6tHBsABsct1ErP1MIFG2oYEg",
+  projectId: "skillo-77040",
+  databaseURL: "https://skillo-77040-default-rtdb.firebaseio.com"
+});
+const db = getDatabase(app);
+
+const canvas = document.getElementById("game"), ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let myId = Math.random().toString(36).substring(2, 10);
+let room = "", players = {}, bullets = [], obstacles = [];
+let keys = {}; let colorSelf = "#00ffcc", colorEnemy = "#ff3344";
+
+window.addEventListener("resize", () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+document.addEventListener("touchstart", e => keys["touch"] = true);
+document.addEventListener("touchend", e => keys["touch"] = false);
+
+function drawPlayer(p, isSelf) {
+  ctx.fillStyle = isSelf ? colorSelf : colorEnemy;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 20, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.closePath();
+  ctx.strokeStyle = "white";
+  ctx.strokeText(isSelf ? "You" : "Enemy", p.x - 15, p.y - 30);
+}
+
+function drawBullets() {
+  ctx.fillStyle = "#fff";
+  bullets.forEach(b => ctx.fillRect(b.x, b.y, 5, 5));
+}
+
+function drawObstacles() {
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.w, o.h));
+}
+
+function updateMyPlayer() {
+  let p = players[myId];
+  if (!p) return;
+  let dx = 0, dy = 0;
+  if (keys.ArrowUp) dy = -5;
+  if (keys.ArrowDown) dy = 5;
+  if (keys.ArrowLeft) dx = -5;
+  if (keys.ArrowRight) dx = 5;
+  if (!collides(p.x + dx, p.y + dy)) {
+    p.x += dx;
+    p.y += dy;
+  }
+  if (keys[" "] || keys["touch"]) fireBullet(p);
+  p.x = Math.max(0, Math.min(canvas.width, p.x));
+  p.y = Math.max(0, Math.min(canvas.height, p.y));
+  set(ref(db, `rooms/${room}/players/${myId}`), p);
+}
+
+function collides(nx, ny) {
+  return obstacles.some(o => nx > o.x && nx < o.x + o.w && ny > o.y && ny < o.y + o.h);
+}
+
+function fireBullet(p) {
+  if (!p.lastShot || Date.now() - p.lastShot > 400) {
+    let id = Date.now() + "_" + myId;
+    set(ref(db, `rooms/${room}/bullets/${id}`), {
+      x: p.x, y: p.y - 20, dx: 0, dy: -7
+    });
+    p.lastShot = Date.now();
+  }
+}
+
+function animate() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawObstacles();
+  updateMyPlayer();
+  for (let id in players) drawPlayer(players[id], id === myId);
+  drawBullets();
+  requestAnimationFrame(animate);
+}
+
+function setupListeners() {
+  onValue(ref(db, `rooms/${room}/players`), snap => {
+    players = snap.val() || {};
+    if (Object.keys(players).length === 2) {
+      document.getElementById("info").innerText = `Game started in room: ${room}`;
+    } else {
+      document.getElementById("info").innerText = `Waiting for player 2 in room: ${room}`;
+    }
+  });
+  onValue(ref(db, `rooms/${room}/bullets`), snap => {
+    let raw = snap.val() || {};
+    bullets = Object.entries(raw).map(([id, b]) => ({ ...b, id }));
+  });
+  setInterval(() => {
+    bullets.forEach(b => {
+      b.x += b.dx;
+      b.y += b.dy;
+      set(ref(db, `rooms/${room}/bullets/${b.id}`), b);
+      if (b.y < 0 || b.y > canvas.height || b.x < 0 || b.x > canvas.width) {
+        remove(ref(db, `rooms/${room}/bullets/${b.id}`));
+      }
+    });
+  }, 50);
+}
+
+function createRoom() {
+  room = document.getElementById("pin").value.trim();
+  if (!room) return alert("Enter PIN");
+  set(ref(db, `rooms/${room}/players/${myId}`), { x: 100, y: canvas.height - 100 });
+  setupListeners();
+  generateObstacles();
+  document.getElementById("ui").style.display = "none";
+  animate();
+}
+
+function joinRoom(roomName) {
+  room = roomName;
+  get(child(ref(db), `rooms/${room}/players`)).then(snap => {
+    let val = snap.val();
+    if (!val || Object.keys(val).length >= 2) return alert("Room full or not found");
+    set(ref(db, `rooms/${room}/players/${myId}`), { x: canvas.width - 100, y: canvas.height - 100 });
+    setupListeners();
+    generateObstacles();
+    document.getElementById("ui").style.display = "none";
+    animate();
+  });
+}
+
+function loadRooms() {
+  onValue(ref(db, `rooms`), snap => {
+    const rooms = snap.val();
+    const roomList = document.getElementById("roomList");
+    roomList.innerHTML = "<b>Join a Room:</b><br/>";
+    if (rooms) {
+      Object.keys(rooms).forEach(r => {
+        let pCount = rooms[r].players ? Object.keys(rooms[r].players).length : 0;
+        if (pCount < 2) {
+          let div = document.createElement("div");
+          div.textContent = `Room ${r} (${pCount}/2)`;
+          div.className = "roomItem";
+          div.onclick = () => joinRoom(r);
+          roomList.appendChild(div);
+        }
+      });
+    }
+  });
+}
+
+function generateObstacles() {
+  obstacles = [];
+  for (let i = 0; i < 10; i++) {
+    obstacles.push({
+      x: Math.random() * (canvas.width - 100),
+      y: Math.random() * (canvas.height - 100),
+      w: 60,
+      h: 60
+    });
+  }
+}
+
+loadRooms();
+window.createRoom = createRoom;
+window.joinRoom = joinRoom;
+</script>
+</body>
+</html>
