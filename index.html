@@ -1,80 +1,476 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Realistic 2-Player Shooting Game</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced 2-Player Shooting Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     html, body {
       margin: 0; padding: 0;
-      background: url('https://images.unsplash.com/photo-1505935428862-770b6f24f629?fit=crop&w=1950&q=80') no-repeat center center fixed;
-      background-size: cover;
       overflow: hidden;
       font-family: 'Segoe UI', sans-serif;
+      height: 100%;
+      touch-action: none;
     }
     canvas {
       display: block;
     }
-    #ui {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.7);
-      padding: 10px;
-      border-radius: 8px;
+    #loadingScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
       color: white;
-      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
     }
-    #ui input, #ui button {
-      padding: 8px;
-      margin: 4px;
+    .loader {
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #3498db;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    #menuScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(to bottom, #000428, #004e92);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .menu-container {
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 15px;
+      padding: 20px;
+      width: 90%;
+      max-width: 500px;
+    }
+    .menu-title {
+      color: white;
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+    }
+    .menu-section {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 10px;
+    }
+    .section-title {
+      color: #00ffcc;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      color: white;
+      margin-bottom: 5px;
+    }
+    .form-control {
+      width: 100%;
+      padding: 10px;
       border-radius: 5px;
       border: none;
-      font-size: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      box-sizing: border-box;
+    }
+    .btn {
+      padding: 10px 15px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      width: 100%;
+      margin-top: 5px;
+      transition: all 0.3s;
+    }
+    .btn-primary {
+      background: #00ffcc;
+      color: #000;
+    }
+    .btn-secondary {
+      background: #ff3344;
+      color: white;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    .map-selector {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    .map-option {
+      width: 30%;
+      height: 60px;
+      border-radius: 5px;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .map-option.selected {
+      opacity: 1;
+      box-shadow: 0 0 10px #00ffcc;
+    }
+    .map-option span {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      font-size: 12px;
+      padding: 3px;
+      text-align: center;
     }
     #roomList {
-      margin-top: 10px;
-      max-height: 100px;
+      max-height: 150px;
       overflow-y: auto;
-      background: #111;
-      padding: 8px;
+      margin-top: 10px;
+    }
+    .room-item {
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.1);
       border-radius: 5px;
-    }
-    .roomItem {
+      margin-bottom: 5px;
       cursor: pointer;
-      padding: 4px;
-      background: #222;
-      margin: 2px 0;
-      border-radius: 4px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    .roomItem:hover {
-      background: #333;
+    .room-item:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
-    #info {
+    #gameUI {
       position: absolute;
-      top: 10px;
-      right: 10px;
-      color: lime;
-      background: rgba(0,0,0,0.5);
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 100;
+    }
+    #healthDisplay {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: white;
+      font-size: 16px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 10px;
+    }
+    .health-bar {
+      width: 150px;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+    .health-fill {
+      height: 100%;
+      background: linear-gradient(to right, red, #00ffcc);
+      transition: width 0.3s;
+    }
+    #gameInfo {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      color: white;
+      background: rgba(0, 0, 0, 0.5);
       padding: 10px;
       border-radius: 10px;
       font-size: 14px;
     }
+    #gameControls {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 20px;
+      pointer-events: all;
+    }
+    .control-area {
+      width: 120px;
+      height: 120px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      position: relative;
+    }
+    .joystick {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    .fire-btn {
+      width: 80px;
+      height: 80px;
+      background: rgba(255, 0, 0, 0.5);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-weight: bold;
+    }
+    #waitingOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1500;
+      color: white;
+    }
+    #gameOverScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      color: white;
+    }
+    .join-room-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      border-radius: 10px;
+      z-index: 3000;
+      width: 80%;
+      max-width: 300px;
+      display: none;
+    }
+    .close-modal {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: white;
+      cursor: pointer;
+    }
+    .modal-content {
+      margin-top: 15px;
+    }
+    #rulesButton {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #rulesModal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      padding: 20px;
+      border-radius: 10px;
+      z-index: 3000;
+      width: 90%;
+      max-width: 500px;
+      color: white;
+      display: none;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
   </style>
 </head>
 <body>
-<div id="ui">
-  <input id="pin" placeholder="Room PIN" maxlength="6">
-  <button onclick="createRoom()">Create Room</button>
-  <div id="roomList"></div>
+<div id="loadingScreen">
+  <div class="loader"></div>
+  <div>Loading game assets...</div>
 </div>
+
+<div id="menuScreen">
+  <div class="menu-container">
+    <h1 class="menu-title">CYBER ARENA</h1>
+    
+    <button id="rulesButton">Game Rules</button>
+    
+    <div class="menu-section">
+      <h2 class="section-title">Create Game</h2>
+      <div class="form-group">
+        <label for="roomName">Room Name</label>
+        <input type="text" id="roomName" class="form-control" placeholder="Enter a room name">
+      </div>
+      <div class="form-group">
+        <label for="roomPin">PIN (4-6 digits)</label>
+        <input type="text" id="roomPin" class="form-control" placeholder="Create a PIN" maxlength="6" pattern="[0-9]*">
+      </div>
+      
+      <div class="form-group">
+        <label>Select Map</label>
+        <div class="map-selector">
+          <div class="map-option selected" data-map="space" style="background: url('https://images.unsplash.com/photo-1505935428862-770b6f24f629?fit=crop&w=240&q=80') no-repeat center/cover">
+            <span>Space</span>
+          </div>
+          <div class="map-option" data-map="desert" style="background: url('https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?fit=crop&w=240&q=80') no-repeat center/cover">
+            <span>Desert</span>
+          </div>
+          <div class="map-option" data-map="urban" style="background: url('https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?fit=crop&w=240&q=80') no-repeat center/cover">
+            <span>Urban</span>
+          </div>
+        </div>
+      </div>
+      
+      <button class="btn btn-primary" id="createGameBtn">Create Game</button>
+    </div>
+    
+    <div class="menu-section">
+      <h2 class="section-title">Join Game</h2>
+      <button class="btn btn-secondary" id="showAvailableRoomsBtn">Show Available Rooms</button>
+      <div id="roomList"></div>
+    </div>
+  </div>
+</div>
+
+<div id="waitingOverlay" style="display: none;">
+  <div class="loader"></div>
+  <h2>Waiting for Player 2</h2>
+  <div id="roomInfoDisplay">Room: <span id="roomNameDisplay"></span></div>
+  <div>PIN: <span id="roomPinDisplay"></span></div>
+  <div>Share this PIN with your friend to join!</div>
+</div>
+
+<div id="gameOverScreen">
+  <h1 id="gameOverMessage">Game Over!</h1>
+  <div id="gameStats"></div>
+  <button class="btn btn-primary" id="playAgainBtn" style="width: 200px; margin-top: 20px;">Play Again</button>
+  <button class="btn btn-secondary" id="returnToMenuBtn" style="width: 200px; margin-top: 10px;">Return to Menu</button>
+</div>
+
+<div class="join-room-modal" id="joinRoomModal">
+  <span class="close-modal" id="closeJoinModal">&times;</span>
+  <h2 style="color: white; text-align: center;">Join Room</h2>
+  <div class="modal-content">
+    <div class="form-group">
+      <label>Room: <span id="selectedRoomName"></span></label>
+    </div>
+    <div class="form-group">
+      <label for="joinPin">Enter PIN</label>
+      <input type="text" id="joinPin" class="form-control" placeholder="Enter PIN" maxlength="6" pattern="[0-9]*">
+    </div>
+    <button class="btn btn-primary" id="confirmJoinBtn">Join Game</button>
+  </div>
+</div>
+
+<div id="rulesModal">
+  <span class="close-modal" id="closeRulesModal">&times;</span>
+  <h2 style="text-align: center; color: #00ffcc;">Game Rules</h2>
+  <div style="margin-top: 15px;">
+    <h3 style="color: #00ffcc;">Basic Controls</h3>
+    <ul>
+      <li>Use arrow keys or the left joystick on mobile to move your character</li>
+      <li>Press space bar or the fire button on mobile to shoot</li>
+    </ul>
+    
+    <h3 style="color: #00ffcc; margin-top: 15px;">Gameplay</h3>
+    <ul>
+      <li>Each player starts with 100 health points</li>
+      <li>Each bullet hit causes 10 damage</li>
+      <li>Navigate around obstacles to avoid enemy fire</li>
+      <li>The game ends when one player's health reaches zero</li>
+    </ul>
+    
+    <h3 style="color: #00ffcc; margin-top: 15px;">Maps</h3>
+    <ul>
+      <li><strong>Space:</strong> Standard map with scattered obstacles</li>
+      <li><strong>Desert:</strong> Few large obstacles and more open space</li>
+      <li><strong>Urban:</strong> Many small obstacles creating a maze-like environment</li>
+    </ul>
+    
+    <h3 style="color: #00ffcc; margin-top: 15px;">Room Management</h3>
+    <ul>
+      <li>Room creator sets a name and PIN</li>
+      <li>Second player must enter the correct PIN to join</li>
+      <li>Room creator selects the map for the match</li>
+    </ul>
+  </div>
+</div>
+
 <canvas id="game"></canvas>
-<div id="info"></div>
+
+<div id="gameUI" style="display: none;">
+  <div id="healthDisplay">
+    <div>You: <span id="myHealth">100</span>%</div>
+    <div class="health-bar"><div class="health-fill" id="myHealthBar" style="width: 100%"></div></div>
+    <div style="margin-top: 5px;">Enemy: <span id="enemyHealth">100</span>%</div>
+    <div class="health-bar"><div class="health-fill" id="enemyHealthBar" style="width: 100%"></div></div>
+  </div>
+  
+  <div id="gameInfo">
+    <div>Room: <span id="currentRoom"></span></div>
+    <div>Map: <span id="currentMap"></span></div>
+  </div>
+  
+  <div id="gameControls">
+    <div class="control-area" id="joystickArea">
+      <div class="joystick" id="joystick"></div>
+    </div>
+    <div class="fire-btn" id="fireButton">FIRE</div>
+  </div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, get, child, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, get, child, remove, update, onDisconnect } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
+// Firebase configuration
 const app = initializeApp({
   apiKey: "AIzaSyCxD9kkuUl6tHBsABsct1ErP1MIFG2oYEg",
   projectId: "skillo-77040",
@@ -82,168 +478,861 @@ const app = initializeApp({
 });
 const db = getDatabase(app);
 
-const canvas = document.getElementById("game"), ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
+// Game variables
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+let gameActive = false;
 let myId = Math.random().toString(36).substring(2, 10);
-let room = "", players = {}, bullets = [], obstacles = [];
-let keys = {}; let colorSelf = "#00ffcc", colorEnemy = "#ff3344";
+let room = "", roomPin = "", selectedMap = "space";
+let players = {}, bullets = [], obstacles = [];
+let keys = {};
+let colorSelf = "#00ffcc", colorEnemy = "#ff3344";
+let joystickActive = false;
+let joystickData = { x: 0, y: 0 };
+let bulletSpeed = 10;
+let isAdmin = false;
+let gameLoopInterval;
+let mapBackgrounds = {
+  space: "https://images.unsplash.com/photo-1505935428862-770b6f24f629?fit=crop&w=1950&q=80",
+  desert: "https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?fit=crop&w=1950&q=80",
+  urban: "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?fit=crop&w=1950&q=80"
+};
+let mapObstacleTemplates = {
+  space: [
+    { x: 0.1, y: 0.2, w: 0.15, h: 0.1 },
+    { x: 0.7, y: 0.3, w: 0.2, h: 0.1 },
+    { x: 0.3, y: 0.5, w: 0.4, h: 0.05 },
+    { x: 0.1, y: 0.7, w: 0.1, h: 0.2 },
+    { x: 0.8, y: 0.7, w: 0.1, h: 0.2 }
+  ],
+  desert: [
+    { x: 0.2, y: 0.2, w: 0.6, h: 0.1 },
+    { x: 0.2, y: 0.7, w: 0.6, h: 0.1 }
+  ],
+  urban: [
+    { x: 0.1, y: 0.1, w: 0.1, h: 0.1 },
+    { x: 0.3, y: 0.1, w: 0.1, h: 0.1 },
+    { x: 0.5, y: 0.1, w: 0.1, h: 0.1 },
+    { x: 0.7, y: 0.1, w: 0.1, h: 0.1 },
+    { x: 0.2, y: 0.3, w: 0.1, h: 0.1 },
+    { x: 0.4, y: 0.3, w: 0.1, h: 0.1 },
+    { x: 0.6, y: 0.3, w: 0.1, h: 0.1 },
+    { x: 0.8, y: 0.3, w: 0.1, h: 0.1 },
+    { x: 0.1, y: 0.5, w: 0.1, h: 0.1 },
+    { x: 0.3, y: 0.5, w: 0.1, h: 0.1 },
+    { x: 0.5, y: 0.5, w: 0.1, h: 0.1 },
+    { x: 0.7, y: 0.5, w: 0.1, h: 0.1 },
+    { x: 0.2, y: 0.7, w: 0.1, h: 0.1 },
+    { x: 0.4, y: 0.7, w: 0.1, h: 0.1 },
+    { x: 0.6, y: 0.7, w: 0.1, h: 0.1 },
+    { x: 0.8, y: 0.7, w: 0.1, h: 0.1 }
+  ]
+};
 
-window.addEventListener("resize", () => {
+// Sound effects (placeholders)
+const sounds = {
+  shoot: new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAB8fHz8fHz8fHz8"),
+  hit: new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAB8fHz8fHz8fHz8"),
+  explosion: new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAB8fHz8fHz8fHz8")
+};
+
+// Initialize game
+function init() {
+  // Set canvas size
+  resizeCanvas();
+  
+  // Event listeners for keyboard
+  document.addEventListener("keydown", e => {
+    keys[e.key] = true;
+    if (e.key === " " && gameActive) fireBullet();
+  });
+  document.addEventListener("keyup", e => keys[e.key] = false);
+  
+  // Mobile controls
+  setupMobileControls();
+  
+  // Window resize event
+  window.addEventListener("resize", resizeCanvas);
+  
+  // Menu event listeners
+  document.getElementById("createGameBtn").addEventListener("click", createRoom);
+  document.getElementById("showAvailableRoomsBtn").addEventListener("click", loadAndShowRooms);
+  document.getElementById("confirmJoinBtn").addEventListener("click", joinSelectedRoom);
+  document.getElementById("closeJoinModal").addEventListener("click", () => {
+    document.getElementById("joinRoomModal").style.display = "none";
+  });
+  document.getElementById("playAgainBtn").addEventListener("click", resetGame);
+  document.getElementById("returnToMenuBtn").addEventListener("click", returnToMenu);
+  document.getElementById("rulesButton").addEventListener("click", showRules);
+  document.getElementById("closeRulesModal").addEventListener("click", () => {
+    document.getElementById("rulesModal").style.display = "none";
+  });
+  
+  // Map selection
+  const mapOptions = document.querySelectorAll(".map-option");
+  mapOptions.forEach(option => {
+    option.addEventListener("click", () => {
+      mapOptions.forEach(opt => opt.classList.remove("selected"));
+      option.classList.add("selected");
+      selectedMap = option.getAttribute("data-map");
+    });
+  });
+  
+  // Hide loading screen after a short delay
+  setTimeout(() => {
+    document.getElementById("loadingScreen").style.display = "none";
+  }, 1500);
+  
+  // Load available rooms once
+  loadRooms();
+}
+
+function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-});
-
-document.addEventListener("keydown", e => keys[e.key] = true);
-document.addEventListener("keyup", e => keys[e.key] = false);
-document.addEventListener("touchstart", e => keys["touch"] = true);
-document.addEventListener("touchend", e => keys["touch"] = false);
-
-function drawPlayer(p, isSelf) {
-  ctx.fillStyle = isSelf ? colorSelf : colorEnemy;
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, 20, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.closePath();
-  ctx.strokeStyle = "white";
-  ctx.strokeText(isSelf ? "You" : "Enemy", p.x - 15, p.y - 30);
+  if (gameActive) drawGame();
 }
 
-function drawBullets() {
-  ctx.fillStyle = "#fff";
-  bullets.forEach(b => ctx.fillRect(b.x, b.y, 5, 5));
-}
-
-function drawObstacles() {
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.w, o.h));
-}
-
-function updateMyPlayer() {
-  let p = players[myId];
-  if (!p) return;
-  let dx = 0, dy = 0;
-  if (keys.ArrowUp) dy = -5;
-  if (keys.ArrowDown) dy = 5;
-  if (keys.ArrowLeft) dx = -5;
-  if (keys.ArrowRight) dx = 5;
-  if (!collides(p.x + dx, p.y + dy)) {
-    p.x += dx;
-    p.y += dy;
-  }
-  if (keys[" "] || keys["touch"]) fireBullet(p);
-  p.x = Math.max(0, Math.min(canvas.width, p.x));
-  p.y = Math.max(0, Math.min(canvas.height, p.y));
-  set(ref(db, `rooms/${room}/players/${myId}`), p);
-}
-
-function collides(nx, ny) {
-  return obstacles.some(o => nx > o.x && nx < o.x + o.w && ny > o.y && ny < o.y + o.h);
-}
-
-function fireBullet(p) {
-  if (!p.lastShot || Date.now() - p.lastShot > 400) {
-    let id = Date.now() + "_" + myId;
-    set(ref(db, `rooms/${room}/bullets/${id}`), {
-      x: p.x, y: p.y - 20, dx: 0, dy: -7
-    });
-    p.lastShot = Date.now();
-  }
-}
-
-function animate() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawObstacles();
-  updateMyPlayer();
-  for (let id in players) drawPlayer(players[id], id === myId);
-  drawBullets();
-  requestAnimationFrame(animate);
-}
-
-function setupListeners() {
-  onValue(ref(db, `rooms/${room}/players`), snap => {
-    players = snap.val() || {};
-    if (Object.keys(players).length === 2) {
-      document.getElementById("info").innerText = `Game started in room: ${room}`;
-    } else {
-      document.getElementById("info").innerText = `Waiting for player 2 in room: ${room}`;
+function setupMobileControls() {
+  const joystickArea = document.getElementById("joystickArea");
+  const joystick = document.getElementById("joystick");
+  const fireButton = document.getElementById("fireButton");
+  
+  // Joystick touch events
+  joystickArea.addEventListener("touchstart", e => {
+    e.preventDefault();
+    joystickActive = true;
+    updateJoystickPosition(e.touches[0]);
+  });
+  
+  joystickArea.addEventListener("touchmove", e => {
+    e.preventDefault();
+    if (joystickActive) updateJoystickPosition(e.touches[0]);
+  });
+  
+  joystickArea.addEventListener("touchend", () => {
+    joystickActive = false;
+    joystick.style.transform = "translate(-50%, -50%)";
+    joystickData = { x: 0, y: 0 };
+  });
+  
+  // Fire button touch events
+  fireButton.addEventListener("touchstart", e => {
+    e.preventDefault();
+    keys["fire"] = true;
+    if (gameActive) fireBullet();
+  });
+  
+  fireButton.addEventListener("touchend", () => {
+    keys["fire"] = false;
+  });
+  
+  function updateJoystickPosition(touch) {
+    const rect = joystickArea.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    let x = touch.clientX - rect.left - centerX;
+    let y = touch.clientY - rect.top - centerY;
+    
+    // Limit joystick movement to control area radius
+    const maxRadius = rect.width / 2 - 25;
+    const distance = Math.sqrt(x * x + y * y);
+    
+    if (distance > maxRadius) {
+      const angle = Math.atan2(y, x);
+      x = Math.cos(angle) * maxRadius;
+      y = Math.sin(angle) * maxRadius;
     }
-  });
-  onValue(ref(db, `rooms/${room}/bullets`), snap => {
-    let raw = snap.val() || {};
-    bullets = Object.entries(raw).map(([id, b]) => ({ ...b, id }));
-  });
-  setInterval(() => {
-    bullets.forEach(b => {
-      b.x += b.dx;
-      b.y += b.dy;
-      set(ref(db, `rooms/${room}/bullets/${b.id}`), b);
-      if (b.y < 0 || b.y > canvas.height || b.x < 0 || b.x > canvas.width) {
-        remove(ref(db, `rooms/${room}/bullets/${b.id}`));
-      }
-    });
-  }, 50);
-}
-
-function createRoom() {
-  room = document.getElementById("pin").value.trim();
-  if (!room) return alert("Enter PIN");
-  set(ref(db, `rooms/${room}/players/${myId}`), { x: 100, y: canvas.height - 100 });
-  setupListeners();
-  generateObstacles();
-  document.getElementById("ui").style.display = "none";
-  animate();
-}
-
-function joinRoom(roomName) {
-  room = roomName;
-  get(child(ref(db), `rooms/${room}/players`)).then(snap => {
-    let val = snap.val();
-    if (!val || Object.keys(val).length >= 2) return alert("Room full or not found");
-    set(ref(db, `rooms/${room}/players/${myId}`), { x: canvas.width - 100, y: canvas.height - 100 });
-    setupListeners();
-    generateObstacles();
-    document.getElementById("ui").style.display = "none";
-    animate();
-  });
+    
+    // Update joystick position
+    joystick.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+    
+    // Normalize joystick data for movement
+    joystickData.x = x / maxRadius;
+    joystickData.y = y / maxRadius;
+  }
 }
 
 function loadRooms() {
   onValue(ref(db, `rooms`), snap => {
-    const rooms = snap.val();
+    const rooms = snap.val() || {};
+    const roomNames = Object.keys(rooms)
+      .filter(r => rooms[r].players && Object.keys(rooms[r].players).length < 2);
+    
+    // Sort rooms by creation time (newest first)
+    roomNames.sort((a, b) => {
+      return (rooms[b].createdAt || 0) - (rooms[a].createdAt || 0);
+    });
+  });
+}
+
+function loadAndShowRooms() {
+  get(ref(db, `rooms`)).then(snap => {
+    const rooms = snap.val() || {};
     const roomList = document.getElementById("roomList");
-    roomList.innerHTML = "<b>Join a Room:</b><br/>";
-    if (rooms) {
-      Object.keys(rooms).forEach(r => {
-        let pCount = rooms[r].players ? Object.keys(rooms[r].players).length : 0;
-        if (pCount < 2) {
-          let div = document.createElement("div");
-          div.textContent = `Room ${r} (${pCount}/2)`;
-          div.className = "roomItem";
-          div.onclick = () => joinRoom(r);
-          roomList.appendChild(div);
-        }
-      });
+    roomList.innerHTML = "";
+    
+    let foundRooms = false;
+    
+    Object.keys(rooms).forEach(roomName => {
+      const roomData = rooms[roomName];
+      if (roomData.players && Object.keys(roomData.players).length < 2) {
+        foundRooms = true;
+        const div = document.createElement("div");
+        div.className = "room-item";
+        div.innerHTML = `
+          <span>${roomName}</span>
+          <span>Map: ${roomData.map || 'Space'}</span>
+        `;
+        div.onclick = () => openJoinRoomModal(roomName);
+        roomList.appendChild(div);
+      }
+    });
+    
+    if (!foundRooms) {
+      roomList.innerHTML = "<div style='color: white; text-align: center; padding: 10px;'>No available rooms found</div>";
     }
   });
 }
 
-function generateObstacles() {
+function openJoinRoomModal(roomName) {
+  document.getElementById("selectedRoomName").textContent = roomName;
+  document.getElementById("joinRoomModal").style.display = "block";
+}
+
+function joinSelectedRoom() {
+  const roomName = document.getElementById("selectedRoomName").textContent;
+  const pin = document.getElementById("joinPin").value.trim();
+  
+  if (!pin) {
+    alert("Please enter the room PIN");
+    return;
+  }
+  
+  get(child(ref(db), `rooms/${roomName}`)).then(snap => {
+    const roomData = snap.val();
+    
+    if (!roomData) {
+      alert("Room not found");
+      return;
+    }
+    
+    if (roomData.pin !== pin) {
+      alert("Incorrect PIN");
+      return;
+    }
+    
+    if (roomData.players && Object.keys(roomData.players).length >= 2) {
+      alert("Room is full");
+      return;
+    }
+    
+    // Join the room
+    room = roomName;
+    joinGame(roomData.map);
+    document.getElementById("joinRoomModal").style.display = "none";
+  });
+}
+
+function createRoom() {
+  const roomNameInput = document.getElementById("roomName").value.trim();
+  const roomPinInput = document.getElementById("roomPin").value.trim();
+  
+  if (!roomNameInput) {
+    alert("Please enter a room name");
+    return;
+  }
+  
+  if (!roomPinInput || roomPinInput.length < 4) {
+    alert("Please enter a PIN (at least 4 digits)");
+    return;
+  }
+  
+  // Check if room already exists
+  get(child(ref(db), `rooms/${roomNameInput}`)).then(snap => {
+    if (snap.exists()) {
+      alert("Room name already taken. Please choose another name.");
+      return;
+    }
+    
+    // Create new room
+    room = roomNameInput;
+    roomPin = roomPinInput;
+    isAdmin = true;
+    
+    // Save room data to database
+    set(ref(db, `rooms/${room}`), {
+      pin: roomPin,
+      map: selectedMap,
+      createdAt: Date.now(),
+      gameState: "waiting"
+    });
+    
+    // Show waiting screen
+    document.getElementById("menuScreen").style.display = "none";
+    document.getElementById("waitingOverlay").style.display = "flex";
+    document.getElementById("roomNameDisplay").textContent = room;
+    document.getElementById("roomPinDisplay").textContent = roomPin;
+    
+    // Setup admin listeners
+    setupAdminListeners();
+  });
+}
+
+function setupAdminListeners() {
+  // Listen for player joins
+  onValue(ref(db, `rooms/${room}/players`), snap => {
+    const playersData = snap.val() || {};
+    const playerCount = Object.keys(playersData).length;
+    
+    if (playerCount === 2) {
+      // Start the game when second player joins
+      startGame();
+    }
+  });
+  
+  // Setup cleanup on disconnect
+  onDisconnect(ref(db, `rooms/${room}`)).remove();
+}
+
+function joinGame(mapType) {
+  isAdmin = false;
+  
+  // Get room data first
+  get(child(ref(db), `rooms/${room}`)).then(snap => {
+    const roomData = snap.val();
+    if (!roomData) return;
+    
+    selectedMap = roomData.map || "space";
+    
+    // Set player position on the right side
+    set(ref(db, `rooms/${room}/players/${myId}`), {
+      x: canvas.width - 100,
+      y: canvas.height - 100,
+      health: 100,
+      angle: 0,
+      lastShot: 0
+    });
+    
+    // Setup player disconnect handler
+    onDisconnect(ref(db, `rooms/${room}/players/${myId}`)).remove();
+    
+    // Start the game
+    startGame();
+  });
+}
+
+function startGame() {
+  // Hide menu and waiting screens
+  document.getElementById("menuScreen").style.display = "none";
+  document.getElementById("waitingOverlay").style.display = "none";
+  
+  // Show game UI
+  document.getElementById("gameUI").style.display = "block";
+  document.getElementById("currentRoom").textContent = room;
+  document.getElementById("currentMap").textContent = selectedMap.charAt(0).toUpperCase() + selectedMap.slice(1);
+  
+  // Set game background based on selected map
+  document.body.style.background = `url('${mapBackgrounds[selectedMap]}') no-repeat center center fixed`;
+  document.body.style.backgroundSize = "cover";
+  
+  // Generate obstacles based on map type
+  generateObstacles(selectedMap);
+  
+  // Setup game listeners
+  setupGameListeners();
+  
+  // Admin adds itself to the game
+  if (isAdmin) {
+    set(ref(db, `rooms/${room}/players/${myId}`), {
+      x: 100,
+      y: canvas.height - 100,
+      health: 100,
+      angle: 0,
+      lastShot: 0
+    });
+    
+    // Update game state
+    update(ref(db, `rooms/${room}`), {
+      gameState: "active"
+    });
+  }
+  
+  // Set game as active
+  gameActive = true;
+  
+  // Start game loop
+  gameLoopInterval = setInterval(gameLoop, 20);
+  
+  // Start rendering
+  requestAnimationFrame(animate);
+}
+
+function generateObstacles(mapType) {
   obstacles = [];
-  for (let i = 0; i < 10; i++) {
+  const templates = mapObstacleTemplates[mapType] || mapObstacleTemplates.space;
+  
+  templates.forEach(template => {
     obstacles.push({
-      x: Math.random() * (canvas.width - 100),
-      y: Math.random() * (canvas.height - 100),
-      w: 60,
-      h: 60
+      x: template.x * canvas.width,
+      y: template.y * canvas.height,
+      w: template.w * canvas.width,
+      h: template.h * canvas.height
+    });
+  });
+  
+  // Save obstacles to the database
+  set(ref(db, `rooms/${room}/obstacles`), obstacles);
+}
+
+function setupGameListeners() {
+  // Listen for players updates
+  onValue(ref(db, `rooms/${room}/players`), snap => {
+    players = snap.val() || {};
+    
+    // Update health displays
+    updateHealthDisplay();
+    
+    // Check if game is over
+    checkGameOver();
+  });
+  
+  // Listen for bullets updates
+  onValue(ref(db, `rooms/${room}/bullets`), snap => {
+    const bulletsData = snap.val() || {};
+    bullets = Object.entries(bulletsData).map(([id, data]) => ({
+      ...data,
+      id
+    }));
+  });
+  
+  // Listen for obstacles (only if not admin)
+  if (!isAdmin) {
+    onValue(ref(db, `rooms/${room}/obstacles`), snap => {
+      obstacles = snap.val() || [];
     });
   }
 }
 
-loadRooms();
-window.createRoom = createRoom;
-window.joinRoom = joinRoom;
+function updateHealthDisplay() {
+  if (!players[myId]) return;
+  
+  const myHealthElement = document.getElementById("myHealth");
+  const myHealthBar = document.getElementById("myHealthBar");
+  const enemyHealthElement = document.getElementById("enemyHealth");
+  const enemyHealthBar = document.getElementById("enemyHealthBar");
+  
+  // Get enemy ID (assuming only 2 players)
+  const enemyId = Object.keys(players).find(id => id !== myId);
+  
+  if (myHealthElement && myHealthBar) {
+    const myHealth = players[myId].health;
+    myHealthElement.textContent = myHealth;
+    myHealthBar.style.width = `${myHealth}%`;
+    
+    // Change color based on health
+    if (myHealth < 30) {
+      myHealthBar.style.background = "red";
+    } else if (myHealth < 60) {
+      myHealthBar.style.background = "orange";
+    } else {
+      myHealthBar.style.background = "#00ffcc";
+    }
+  }
+  
+  if (enemyId && enemyHealthElement && enemyHealthBar) {
+    const enemyHealth = players[enemyId].health;
+    enemyHealthElement.textContent = enemyHealth;
+    enemyHealthBar.style.width = `${enemyHealth}%`;
+    
+    // Change color based on health
+    if (enemyHealth < 30) {
+      enemyHealthBar.style.background = "red";
+    } else if (enemyHealth < 60) {
+      enemyHealthBar.style.background = "orange";
+    } else {
+      enemyHealthBar.style.background = "#ff3344";
+    }
+  }
+}
+
+function gameLoop() {
+  if (!gameActive) return;
+  
+  // Update player position based on input
+  updatePlayerPosition();
+  
+  // Update bullets
+  updateBullets();
+  
+  // Check collisions
+  checkCollisions();
+}
+
+function updatePlayerPosition() {
+  if (!players[myId]) return;
+  
+  let dx = 0, dy = 0;
+  const speed = 5;
+  
+  // Keyboard controls
+  if (keys.ArrowUp || keys.w) dy = -speed;
+  if (keys.ArrowDown || keys.s) dy = speed;
+  if (keys.ArrowLeft || keys.a) dx = -speed;
+  if (keys.ArrowRight || keys.d) dx = speed;
+  
+  // Joystick controls (for mobile)
+  if (joystickActive) {
+    dx = joystickData.x * speed;
+    dy = joystickData.y * speed;
+  }
+  
+  // Move only if not colliding with obstacles
+  const newX = players[myId].x + dx;
+  const newY = players[myId].y + dy;
+  
+  if (!checkObstacleCollision(newX, newY, 20)) {
+    players[myId].x = newX;
+    players[myId].y = newY;
+  }
+  
+  // Keep player within canvas boundaries
+  players[myId].x = Math.max(20, Math.min(canvas.width - 20, players[myId].x));
+  players[myId].y = Math.max(20, Math.min(canvas.height - 20, players[myId].y));
+  
+  // Calculate angle based on movement direction
+  if (dx !== 0 || dy !== 0) {
+    players[myId].angle = Math.atan2(dy, dx);
+  }
+  
+  // Update player data in database
+  update(ref(db, `rooms/${room}/players/${myId}`), {
+    x: players[myId].x,
+    y: players[myId].y,
+    angle: players[myId].angle
+  });
+}
+
+function checkObstacleCollision(x, y, radius) {
+  return obstacles.some(obs => {
+    const closestX = Math.max(obs.x, Math.min(x, obs.x + obs.w));
+    const closestY = Math.max(obs.y, Math.min(y, obs.y + obs.h));
+    
+    const distanceX = x - closestX;
+    const distanceY = y - closestY;
+    
+    return (distanceX * distanceX + distanceY * distanceY) < (radius * radius);
+  });
+}
+
+function fireBullet() {
+  if (!gameActive || !players[myId]) return;
+  
+  const now = Date.now();
+  if (now - (players[myId].lastShot || 0) < 400) return; // Fire rate limit
+  
+  // Play shoot sound
+  sounds.shoot.currentTime = 0;
+  sounds.shoot.play().catch(e => console.log("Audio error:", e));
+  
+  // Calculate bullet direction
+  let angle = players[myId].angle || 0;
+  
+  // For keyboard controls without movement, shoot upward
+  if (!joystickActive && !keys.ArrowUp && !keys.ArrowDown && !keys.ArrowLeft && !keys.ArrowRight) {
+    angle = -Math.PI / 2; // Shoot upward
+  }
+  
+  const bulletId = `${now}_${myId}`;
+  const bulletData = {
+    x: players[myId].x,
+    y: players[myId].y,
+    dx: Math.cos(angle) * bulletSpeed,
+    dy: Math.sin(angle) * bulletSpeed,
+    owner: myId,
+    createdAt: now
+  };
+  
+  // Update player's last shot time
+  players[myId].lastShot = now;
+  update(ref(db, `rooms/${room}/players/${myId}`), {
+    lastShot: now
+  });
+  
+  // Add bullet to database
+  set(ref(db, `rooms/${room}/bullets/${bulletId}`), bulletData);
+}
+
+function updateBullets() {
+  bullets.forEach(bullet => {
+    // Update bullet position
+    bullet.x += bullet.dx;
+    bullet.y += bullet.dy;
+    
+    // Check if bullet is out of bounds
+    if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+      remove(ref(db, `rooms/${room}/bullets/${bullet.id}`));
+      return;
+    }
+    
+    // Check collision with obstacles
+    if (checkBulletObstacleCollision(bullet)) {
+      remove(ref(db, `rooms/${room}/bullets/${bullet.id}`));
+      return;
+    }
+    
+    // Update bullet position in database
+    update(ref(db, `rooms/${room}/bullets/${bullet.id}`), {
+      x: bullet.x,
+      y: bullet.y
+    });
+  });
+}
+
+function checkBulletObstacleCollision(bullet) {
+  return obstacles.some(obs => {
+    return bullet.x >= obs.x && bullet.x <= obs.x + obs.w &&
+           bullet.y >= obs.y && bullet.y <= obs.y + obs.h;
+  });
+}
+
+function checkCollisions() {
+  // Check bullet collisions with players
+  bullets.forEach(bullet => {
+    // Skip bullets that belong to the player
+    if (bullet.owner === myId) return;
+    
+    // Check collision with my player
+    if (players[myId] && getDistance(bullet.x, bullet.y, players[myId].x, players[myId].y) < 20) {
+      // Hit detected
+      sounds.hit.currentTime = 0;
+      sounds.hit.play().catch(e => console.log("Audio error:", e));
+      
+      // Reduce health
+      const newHealth = Math.max(0, players[myId].health - 10);
+      
+      // Update health in database
+      update(ref(db, `rooms/${room}/players/${myId}`), {
+        health: newHealth
+      });
+      
+      // Remove bullet
+      remove(ref(db, `rooms/${room}/bullets/${bullet.id}`));
+    }
+  });
+}
+
+function getDistance(x1, y1, x2, y2) {
+  return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+}
+
+function checkGameOver() {
+  // Need at least two players
+  if (Object.keys(players).length < 2) return;
+  
+  let gameIsOver = false;
+  let winner = null;
+  
+  // Check if any player has zero health
+  for (const id in players) {
+    if (players[id].health <= 0) {
+      gameIsOver = true;
+      // The other player is the winner
+      winner = Object.keys(players).find(pid => pid !== id);
+      break;
+    }
+  }
+  
+  if (gameIsOver && winner) {
+    endGame(winner);
+  }
+}
+
+function endGame(winnerId) {
+  gameActive = false;
+  clearInterval(gameLoopInterval);
+  
+  // Show game over screen
+  const gameOverScreen = document.getElementById("gameOverScreen");
+  const gameOverMessage = document.getElementById("gameOverMessage");
+  const gameStats = document.getElementById("gameStats");
+  
+  gameOverMessage.textContent = winnerId === myId ? "You Win!" : "You Lose!";
+  gameStats.innerHTML = `
+    <div>Your Health: ${players[myId]?.health || 0}%</div>
+    <div>Enemy Health: ${players[winnerId]?.health || 0}%</div>
+  `;
+  
+  gameOverScreen.style.display = "flex";
+  
+  // Update room state
+  if (isAdmin) {
+    update(ref(db, `rooms/${room}`), {
+      gameState: "finished",
+      winner: winnerId
+    });
+  }
+}
+
+function resetGame() {
+  // Hide game over screen
+  document.getElementById("gameOverScreen").style.display = "none";
+  
+  if (isAdmin) {
+    // Reset player health
+    for (const id in players) {
+      update(ref(db, `rooms/${room}/players/${id}`), {
+        health: 100,
+        x: id === myId ? 100 : canvas.width - 100,
+        y: canvas.height - 100
+      });
+    }
+    
+    // Clear all bullets
+    set(ref(db, `rooms/${room}/bullets`), null);
+    
+    // Reset game state
+    update(ref(db, `rooms/${room}`), {
+      gameState: "active"
+    });
+  }
+  
+  // Restart game
+  gameActive = true;
+  gameLoopInterval = setInterval(gameLoop, 20);
+}
+
+function returnToMenu() {
+  // Remove player from room
+  remove(ref(db, `rooms/${room}/players/${myId}`));
+  
+  // If admin, delete the entire room
+  if (isAdmin) {
+    remove(ref(db, `rooms/${room}`));
+  }
+  
+  // Clear game data
+  clearInterval(gameLoopInterval);
+  gameActive = false;
+  room = "";
+  roomPin = "";
+  isAdmin = false;
+  players = {};
+  bullets = [];
+  obstacles = [];
+  
+  // Reset UI
+  document.getElementById("gameOverScreen").style.display = "none";
+  document.getElementById("gameUI").style.display = "none";
+  document.getElementById("menuScreen").style.display = "flex";
+  
+  // Reset background
+  document.body.style.background = "linear-gradient(to bottom, #000428, #004e92)";
+}
+
+function animate() {
+  if (!gameActive) return;
+  
+  drawGame();
+  requestAnimationFrame(animate);
+}
+
+function drawGame() {
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw obstacles
+  drawObstacles();
+  
+  // Draw bullets
+  drawBullets();
+  
+  // Draw players
+  drawPlayers();
+}
+
+function drawObstacles() {
+  ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+  ctx.lineWidth = 2;
+  
+  obstacles.forEach(obs => {
+    ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+    ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+  });
+}
+
+function drawBullets() {
+  ctx.fillStyle = "#fff";
+  
+  bullets.forEach(bullet => {
+    ctx.beginPath();
+    ctx.arc(bullet.x, bullet.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Add bullet trail effect
+    ctx.beginPath();
+    ctx.moveTo(bullet.x, bullet.y);
+    ctx.lineTo(bullet.x - bullet.dx * 2, bullet.y - bullet.dy * 2);
+    ctx.strokeStyle = bullet.owner === myId ? colorSelf : colorEnemy;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+}
+
+function drawPlayers() {
+  for (const id in players) {
+    const player = players[id];
+    const isSelf = id === myId;
+    
+    // Draw player circle
+    ctx.fillStyle = isSelf ? colorSelf : colorEnemy;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, 20, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw player direction indicator
+    const angle = player.angle || 0;
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y);
+    ctx.lineTo(
+      player.x + Math.cos(angle) * 25,
+      player.y + Math.sin(angle) * 25
+    );
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    // Draw player name/identifier
+    ctx.fillStyle = "white";
+    ctx.font = "14px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(isSelf ? "YOU" : "ENEMY", player.x, player.y - 30);
+    
+    // Draw health bar above player
+    const healthWidth = 40;
+    const healthHeight = 5;
+    const healthX = player.x - healthWidth / 2;
+    const healthY = player.y - 25;
+    
+    // Health bar background
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.fillRect(healthX, healthY, healthWidth, healthHeight);
+    
+    // Health bar fill
+    const healthPercent = player.health / 100;
+    ctx.fillStyle = healthPercent > 0.6 ? "green" : healthPercent > 0.3 ? "orange" : "red";
+    ctx.fillRect(healthX, healthY, healthWidth * healthPercent, healthHeight);
+  }
+}
+
+function showRules() {
+  document.getElementById("rulesModal").style.display = "block";
+}
+
+// Start the game
+window.onload = init;
 </script>
 </body>
 </html>
